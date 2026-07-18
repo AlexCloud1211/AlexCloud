@@ -19,11 +19,11 @@ IMAGE_URL = "https://cdn.phototourl.com/free/2026-07-18-6bc7cc20-67ab-4aec-8575-
 
 # ===== NỘI DUNG 1 (Tin nhắn chào - IN HOA THƯỜNG) =====
 MESSAGE_1 = """HIỆN TẠI BẠN ZEN ĐANG BẬN ❌
-CHÀO BẠN ĐÃ ĐẾN VỚI ZENMODS ✅
+CHÀO BẠN ĐÃ ĐẾN VỚI ZENMODS ✔️
 CÓ VIỆC GÌ THÌ CỨ NHẮN NHÉ 🛒
 ━━━━━━━━━━━━
 GROUP ZEN Ở ĐÂY NÈ: https://t.me/ZenStoreVn 👑
-CẢM ƠN BẠN ĐÃ ỦNG HỘ. 😀
+CẢM ƠN BẠN ĐÃ ỦNG HỘ. 🤖
 NÀO ZEN ONLINE SẼ REPLY BẠN"""
 
 # ===== NỘI DUNG 2 (Gửi kèm ảnh - IN HOA THƯỜNG) =====
