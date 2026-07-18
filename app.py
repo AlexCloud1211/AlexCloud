@@ -12,7 +12,7 @@ PHONE = os.environ.get('PHONE', '+84904696471')
 SESSION_STRING = os.environ.get('SESSION_STRING', None)
 
 # ===== CẤU HÌNH BOT =====
-AUTO_REPLY = "Tôi đang offline, sẽ trả lời bạn sau! ❤️"
+AUTO_REPLY = "Thằng Chủ Đang OFF ĐỢI TÍ NÓ REP"
 ONLINE_TIMEOUT = 10  # 10 giây không hoạt động -> offline
 
 # ===== KHỞI TẠO FLASK APP =====
