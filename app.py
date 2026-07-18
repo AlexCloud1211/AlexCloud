@@ -12,7 +12,8 @@ PHONE = os.environ.get('PHONE', '+84904696471')
 SESSION_STRING = os.environ.get('SESSION_STRING', None)
 
 # ===== CẤU HÌNH BOT =====
-ONLINE_TIMEOUT = 10
+ONLINE_TIMEOUT = 10  # 10 giây
+COOLDOWN_TIME = 3600  # 3600 giây = 1 tiếng
 
 # ===== ẢNH CHUYỂN KHOẢN =====
 IMAGE_URL = "https://cdn.phototourl.com/free/2026-07-18-6bc7cc20-67ab-4aec-8575-c8c11cc017f5.jpg"
@@ -43,6 +44,9 @@ else:
 is_online = True
 last_activity = time.time()
 
+# ===== LƯU THỜI GIAN GỬI CUỐI CÙNG CỦA TỪNG USER =====
+sent_users = {}  # {user_id: last_sent_time}
+
 # ===== SỰ KIỆN NHẬN TIN NHẮN =====
 @client.on(events.NewMessage(incoming=True))
 async def auto_reply(event):
@@ -51,28 +55,52 @@ async def auto_reply(event):
     if not event.is_private or event.out:
         return
     
-    if not is_online:
-        try:
-            sender = await event.get_sender()
-            sender_name = sender.first_name or sender.username or str(event.sender_id)
-            
-            # 1. Gửi NỘI DUNG 1 trước (tin nhắn thường, không ảnh)
-            await client.send_message(
-                entity=event.sender_id,
-                message=MESSAGE_1
-            )
-            
-            # 2. Gửi NỘI DUNG 2 kèm ảnh
-            await client.send_file(
-                entity=event.sender_id,
-                file=IMAGE_URL,
-                caption=MESSAGE_2
-            )
-            
-            print(f"✅ Đã gửi 2 tin nhắn cho {sender_name} lúc {time.ctime()}")
-            
-        except Exception as e:
-            print(f"❌ Lỗi: {e}")
+    user_id = event.sender_id
+    current_time = time.time()
+    
+    # Kiểm tra 1: Có đang offline không?
+    if is_online:
+        print(f"⏭️ Bỏ qua user {user_id} - đang online")
+        return
+    
+    # Kiểm tra 2: User đã được gửi trong 1 tiếng chưa?
+    if user_id in sent_users:
+        last_sent = sent_users[user_id]
+        time_diff = current_time - last_sent
+        
+        if time_diff < COOLDOWN_TIME:
+            remaining = int((COOLDOWN_TIME - time_diff) / 60)  # Đổi sang phút
+            print(f"⏭️ Bỏ qua user {user_id} - đã gửi cách đây {int(time_diff/60)} phút, còn {remaining} phút nữa")
+            return
+        else:
+            print(f"🔄 User {user_id} đã qua 1 tiếng, cho phép gửi lại")
+    
+    # Nếu đã offline và chưa gửi (hoặc đã qua 1 tiếng) -> tiến hành gửi
+    try:
+        sender = await event.get_sender()
+        sender_name = sender.first_name or sender.username or str(user_id)
+        
+        # 1. Gửi NỘI DUNG 1 trước (tin nhắn thường, không ảnh)
+        await client.send_message(
+            entity=event.sender_id,
+            message=MESSAGE_1
+        )
+        
+        # 2. Gửi NỘI DUNG 2 kèm ảnh
+        await client.send_file(
+            entity=event.sender_id,
+            file=IMAGE_URL,
+            caption=MESSAGE_2
+        )
+        
+        # Cập nhật thời gian gửi cuối cùng
+        sent_users[user_id] = current_time
+        
+        print(f"✅ Đã gửi 2 tin nhắn cho {sender_name} (ID: {user_id}) lúc {time.ctime()}")
+        print(f"📊 Đã gửi cho {len(sent_users)} user khác nhau")
+        
+    except Exception as e:
+        print(f"❌ Lỗi khi gửi cho user {user_id}: {e}")
 
 # Khi bạn gửi tin nhắn -> online
 @client.on(events.NewMessage(outgoing=True))
@@ -95,11 +123,13 @@ async def check_online_status():
         if time.time() - last_activity > ONLINE_TIMEOUT:
             if is_online:
                 print(f"🔴 Offline - {time.ctime()}")
+                print(f"💡 Bot sẽ bắt đầu gửi tin nhắn khi có người nhắn (mỗi user cách nhau 1 tiếng)")
             is_online = False
         else:
             if not is_online:
                 print(f"🟢 Online - {time.ctime()}")
-                is_online = True
+                print(f"📊 Đã gửi cho {len(sent_users)} user")
+            is_online = True
         await asyncio.sleep(5)
 
 async def run_telegram_bot():
@@ -116,7 +146,12 @@ async def run_telegram_bot():
         print(f"🚀 Bot chạy với tài khoản: {me.first_name} (@{me.username})")
         print(f"📱 Số điện thoại: {PHONE}")
         print(f"⏰ Timeout offline: {ONLINE_TIMEOUT} giây")
+        print(f"⏰ Cooldown: {COOLDOWN_TIME/60} phút (1 tiếng)")
         print("📨 Đang theo dõi tin nhắn...\n")
+        print("💡 Bot sẽ gửi tin nhắn khi:")
+        print("   1. Bạn OFFLINE > 10 giây")
+        print("   2. Có người nhắn tin cho bạn")
+        print("   3. User đó chưa được gửi trong 1 tiếng qua")
         
         asyncio.create_task(check_online_status())
         await client.run_until_disconnected()
@@ -134,7 +169,7 @@ def ping():
 @app.route('/status')
 def status():
     status_text = "🟢 Online" if is_online else "🔴 Offline"
-    return f"Bot status: {status_text}", 200
+    return f"Bot status: {status_text} (Đã gửi cho {len(sent_users)} user)", 200
 
 def run_flask():
     port = int(os.environ.get('PORT', 5000))
