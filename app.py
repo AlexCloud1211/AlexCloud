@@ -14,11 +14,20 @@ SESSION_STRING = os.environ.get('SESSION_STRING', None)
 # ===== CẤU HÌNH BOT =====
 ONLINE_TIMEOUT = 10
 
-# ===== ẢNH CHUYỂN KHOẢN (Dùng URL) =====
+# ===== ẢNH CHUYỂN KHOẢN =====
 IMAGE_URL = "https://cdn.phototourl.com/free/2026-07-18-6bc7cc20-67ab-4aec-8575-c8c11cc017f5.jpg"
 
-# ===== NỘI DUNG TIN NHẮN DUY NHẤT =====
-AUTO_REPLY = "CẦN GÌ CỨ BANK GỬI BILL ZEN SẼ REP SAU ÍT PHÚT"
+# ===== NỘI DUNG 1 (Tin nhắn chào) =====
+MESSAGE_1 = """ℍ𝕀𝔼̣̂ℕ 𝕋𝔸̣𝕀 𝔹𝔸̣ℕ ℤ𝔼ℕ 𝔻𝔸ℕ𝔾 𝔹𝔸̣̂ℕ ❌
+ℂℍ𝔸̀𝕆 𝔹𝔸̣ℕ 𝔻𝔸̃ 𝔻𝔼̂́ℕ 𝕍𝕆̛́𝕀 ℤ𝔼ℕ𝕄𝕆𝔻𝕊 ✅
+ℂ𝕆́ 𝕍𝕀𝔼̣̂ℂ 𝔾𝕀̀ 𝕋ℍ𝕀̀ ℂ𝕌̛́ ℕℍ𝔸̆́ℕ ℕℍ𝔼́ 🛒
+━━━━━━━━━━━━
+𝔾ℝ𝕆𝕌ℙ ℤ𝔼ℕ 𝕆̛̉ 𝔻𝔸̂𝕐 ℕ𝔼̀: ℍ𝕋𝕋ℙ𝕊://𝕋.𝕄𝔼/ℤ𝔼ℕ𝕊𝕋𝕆ℝ𝔼𝕍ℕ 👑
+ℂ𝔸̉𝕄 𝕆̛ℕ 𝔹𝔸̣ℕ 𝔻𝔸̃ 𝕌̉ℕ𝔾 ℍ𝕆̣̂. 😀
+ℕ𝔸̀𝕆 ℤ𝔼ℕ 𝕆ℕ𝕃𝕀ℕ𝔼 𝕊𝔼̃ ℝ𝔼ℙ𝕃𝕐 𝔹𝔸̣ℕ"""
+
+# ===== NỘI DUNG 2 (Gửi kèm ảnh) =====
+MESSAGE_2 = "ℂ𝔸̂̀ℕ 𝔾𝕀̀ ℂ𝕌̛́ 𝔹𝔸ℕ𝕂 ℤ𝔼ℕ 𝕋ℍ𝕀́ℂℍ 𝕃𝔸̆́𝕄 =))"
 
 # ===== KHỞI TẠO FLASK APP =====
 app = Flask(__name__)
@@ -34,7 +43,7 @@ else:
 is_online = True
 last_activity = time.time()
 
-# ===== SỰ KIỆN NHẬN TIN NHẮN - GỬI ẢNH + NỘI DUNG =====
+# ===== SỰ KIỆN NHẬN TIN NHẮN =====
 @client.on(events.NewMessage(incoming=True))
 async def auto_reply(event):
     global is_online
@@ -47,14 +56,20 @@ async def auto_reply(event):
             sender = await event.get_sender()
             sender_name = sender.first_name or sender.username or str(event.sender_id)
             
-            # Gửi ảnh (URL) + nội dung (KHÔNG reply)
+            # 1. Gửi NỘI DUNG 1 trước (tin nhắn thường, không ảnh)
+            await client.send_message(
+                entity=event.sender_id,
+                message=MESSAGE_1
+            )
+            
+            # 2. Gửi NỘI DUNG 2 kèm ảnh
             await client.send_file(
                 entity=event.sender_id,
                 file=IMAGE_URL,
-                caption=AUTO_REPLY
+                caption=MESSAGE_2
             )
             
-            print(f"✅ Đã gửi ảnh + nội dung cho {sender_name} lúc {time.ctime()}")
+            print(f"✅ Đã gửi 2 tin nhắn cho {sender_name} lúc {time.ctime()}")
             
         except Exception as e:
             print(f"❌ Lỗi: {e}")
