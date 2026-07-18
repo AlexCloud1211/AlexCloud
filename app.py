@@ -22,7 +22,7 @@ COOLDOWN_TIME = 600
 
 # ===== ẢNH =====
 IMAGE_URL = "https://cdn.phototourl.com/free/2026-07-18-6bc7cc20-67ab-4aec-8575-c8c11cc017f5.jpg"
-WELCOME_IMAGE_URL = "https://cdn.phototourl.com/free/2026-07-18-6bc7cc20-67ab-4aec-8575-c8c11cc017f5.jpg"  # Thay bằng ảnh welcome
+WELCOME_IMAGE_URL = "https://cdn.phototourl.com/free/2026-07-18-6bc7cc20-67ab-4aec-8575-c8c11cc017f5.jpg"
 
 # ===== NỘI DUNG =====
 MESSAGE_1 = """HIỆN TẠI BẠN ZEN ĐANG BẬN ❌
@@ -35,7 +35,6 @@ NÀO ZEN ONLINE SẼ REPLY BẠN"""
 
 MESSAGE_2 = "CẦN GÌ CỨ BANK ZEN THÍCH LẮM =))"
 
-# ===== NỘI DUNG CHÀO MỪNG (CÓ TÊN NGƯỜI DÙNG) =====
 WELCOME_MESSAGE = """🌧 #Chào Mừng <b>{user_name}</b> Đến Với Group ZenMods nơi của các nhà vua 💤
 
 -> ( Giao Dịch Mua Bán Hack FreeFire Root , Non root , All Hack Adr or IOS .. ) 🧸
@@ -55,7 +54,6 @@ WELCOME_MESSAGE = """🌧 #Chào Mừng <b>{user_name}</b> Đến Với Group Ze
 
 #zenmods2009"""
 
-# ===== NỘI DUNG KHI CÓ NGƯỜI RỜI NHÓM =====
 LEAVE_MESSAGE = """😢 <b>{user_name}</b> ĐÃ RỜI NHÓM!
 
 ━━━━━━━━━━━━
@@ -144,31 +142,27 @@ async def check_online_status():
         await asyncio.sleep(10)
 
 # ============================================
-# PHẦN 2: BOT CLIENT (BOT TOKEN)
+# PHẦN 2: BOT CLIENT (LỆNH ẨN)
 # ============================================
 
 @bot_client.on(events.ChatAction)
 async def handle_group_events(event):
-    """Xử lý sự kiện trong group: join/leave"""
     try:
         chat = await event.get_chat()
         chat_id = event.chat_id
         
-        # Lấy số lượng thành viên hiện tại
         try:
             participants = await bot_client.get_participants(chat)
             member_count = len(participants)
         except:
             member_count = "???"
         
-        # ===== TRƯỜNG HỢP: THÀNH VIÊN MỚI VÀO =====
         if event.user_joined or event.added_by:
             new_user = event.user
             first_name = new_user.first_name or "Người dùng"
             username = new_user.username or "Không có username"
             user_id = new_user.id
             
-            # Tạo tin nhắn chào mừng với tên người dùng
             welcome_text = WELCOME_MESSAGE.format(
                 user_name=first_name,
                 members=member_count,
@@ -176,61 +170,167 @@ async def handle_group_events(event):
                 user_id=user_id
             )
             
-            # Gửi ẢNH + NỘI DUNG chào mừng
             await bot_client.send_file(
                 chat_id,
                 file=WELCOME_IMAGE_URL,
                 caption=welcome_text,
                 parse_mode='html'
             )
-            
-            print(f"🎉 [Bot] Đã chào mừng {first_name} vào group")
+            print(f"🎉 [Bot] Đã chào mừng {first_name}")
         
-        # ===== TRƯỜNG HỢP: THÀNH VIÊN RỜI NHÓM =====
         if event.user_left:
             left_user = event.user
             first_name = left_user.first_name or "Người dùng"
             
-            # Tạo tin nhắn khi có người rời
             leave_text = LEAVE_MESSAGE.format(
                 user_name=first_name,
                 members=member_count
             )
             
-            # Gửi tin nhắn + ảnh (nếu có)
             await bot_client.send_file(
                 chat_id,
-                file=WELCOME_IMAGE_URL,  # Hoặc ảnh khác cho leave
+                file=WELCOME_IMAGE_URL,
                 caption=leave_text,
                 parse_mode='html'
             )
-            
             print(f"😢 [Bot] {first_name} đã rời nhóm")
         
     except Exception as e:
         print(f"❌ Lỗi xử lý group: {e}")
 
-# ===== LỆNH CỦA BOT =====
-@bot_client.on(events.NewMessage(pattern='/start'))
-async def start_command(event):
-    await event.reply(
-        "🤖 <b>ZENMODS BOT</b>\n\n"
-        "📌 <b>Lệnh có sẵn:</b>\n"
-        "/start - Hiển thị tin nhắn này\n"
-        "/ping - Kiểm tra bot còn sống\n"
-        "/status - Xem trạng thái bot\n"
-        "/getcode - Nhận mã OTP test\n"
-        "/stats - Thống kê bot\n\n"
-        "🔹 <b>Telegram Premium Fake</b> đang hoạt động!",
-        parse_mode='html'
-    )
+# ============================================
+# LỆNH ẨN: /check (CHỈ BẠN BIẾT)
+# ============================================
+
+@bot_client.on(events.NewMessage(pattern='/check'))
+async def check_command(event):
+    """Lệnh /check - Kiểm tra kết nối bot (ẩn)"""
+    # Chỉ cho phép user ID của bạn
+    if event.sender_id != YOUR_USER_ID:
+        # Không trả lời gì, giữ bí mật
+        return
+    
+    try:
+        # Kiểm tra User Client
+        user_me = await user_client.get_me()
+        user_status = "🟢 Kết nối tốt" if user_me else "🔴 Lỗi"
+        
+        # Kiểm tra Bot Client
+        bot_me = await bot_client.get_me()
+        bot_status = "🟢 Kết nối tốt" if bot_me else "🔴 Lỗi"
+        
+        # Kiểm tra session
+        session_status = "✅ Có session" if SESSION_STRING else "❌ Không có session (dùng OTP)"
+        
+        # Tạo tin nhắn báo cáo
+        report = f"""🔍 <b>KIỂM TRA KẾT NỐI BOT</b>
+
+━━━━━━━━━━━━━━━━━━
+📱 <b>User Client:</b> {user_status}
+👤 Tên: {user_me.first_name if user_me else '❌'}
+🆔 ID: {user_me.id if user_me else '❌'}
+
+━━━━━━━━━━━━━━━━━━
+🤖 <b>Bot Client:</b> {bot_status}
+👤 Tên: {bot_me.first_name if bot_me else '❌'}
+🆔 ID: {bot_me.id if bot_me else '❌'}
+
+━━━━━━━━━━━━━━━━━━
+🔐 <b>Session:</b> {session_status}
+📶 <b>Trạng thái:</b> {'🟢 Online' if is_online else '🔴 Offline'}
+👥 <b>Đã gửi auto-reply:</b> {len(sent_users)} user
+⏰ <b>Cooldown:</b> {COOLDOWN_TIME/60} phút
+
+━━━━━━━━━━━━━━━━━━
+✅ Bot đang hoạt động bình thường!"""
+        
+        # Gửi tin nhắn riêng cho bạn (ẩn, không reply)
+        await bot_client.send_message(
+            YOUR_USER_ID,
+            report,
+            parse_mode='html'
+        )
+        
+        # Không trả lời trong chat, giữ bí mật
+        print(f"🔍 Đã gửi báo cáo /check cho bạn")
+        
+    except Exception as e:
+        await bot_client.send_message(
+            YOUR_USER_ID,
+            f"❌ Lỗi kiểm tra: {e}"
+        )
+        print(f"❌ Lỗi /check: {e}")
+
+# ============================================
+# LỆNH ẨN: /gui [id] [nội dung] - GỬI TIN NHẮN
+# ============================================
+
+@bot_client.on(events.NewMessage(pattern='/gui'))
+async def gui_command(event):
+    """Lệnh /gui <id> <nội dung> - Gửi tin nhắn từ user client"""
+    # Chỉ cho phép user ID của bạn
+    if event.sender_id != YOUR_USER_ID:
+        return
+    
+    try:
+        # Lấy nội dung lệnh
+        full_text = event.raw_text
+        parts = full_text.split(' ', 2)  # Tối đa 3 phần: /gui, id, nội dung
+        
+        if len(parts) < 3:
+            await bot_client.send_message(
+                YOUR_USER_ID,
+                "⚠️ <b>Cách dùng:</b>\n/gui [user_id] [nội dung tin nhắn]\n\nVí dụ:\n/gui 123456789 Xin chào!",
+                parse_mode='html'
+            )
+            return
+        
+        target_id = int(parts[1])
+        message_content = parts[2]
+        
+        # Gửi tin nhắn từ User Client
+        await user_client.send_message(
+            entity=target_id,
+            message=message_content
+        )
+        
+        # Thông báo thành công
+        await bot_client.send_message(
+            YOUR_USER_ID,
+            f"✅ <b>Đã gửi tin nhắn thành công!</b>\n"
+            f"📤 Đến ID: <code>{target_id}</code>\n"
+            f"💬 Nội dung: {message_content}",
+            parse_mode='html'
+        )
+        
+        print(f"📤 Đã gửi tin nhắn từ User Client đến {target_id}")
+        
+    except ValueError:
+        await bot_client.send_message(
+            YOUR_USER_ID,
+            "❌ ID không hợp lệ! Vui lòng nhập số ID.",
+            parse_mode='html'
+        )
+    except Exception as e:
+        await bot_client.send_message(
+            YOUR_USER_ID,
+            f"❌ Lỗi gửi tin nhắn: {e}",
+            parse_mode='html'
+        )
+        print(f"❌ Lỗi /gui: {e}")
+
+# ============================================
+# LỆNH CŨ (VẪN GIỮ) - KHÔNG CÒN /START
+# ============================================
 
 @bot_client.on(events.NewMessage(pattern='/ping'))
 async def ping_command(event):
+    """Lệnh /ping - Kiểm tra bot còn sống"""
     await event.reply("🏓 <b>Pong!</b> Bot đang hoạt động bình thường!", parse_mode='html')
 
 @bot_client.on(events.NewMessage(pattern='/status'))
 async def status_command(event):
+    """Lệnh /status - Xem trạng thái"""
     status_text = "🟢 Online" if is_online else "🔴 Offline"
     await event.reply(
         f"📊 <b>Trạng thái bot:</b>\n"
@@ -240,23 +340,9 @@ async def status_command(event):
         parse_mode='html'
     )
 
-@bot_client.on(events.NewMessage(pattern='/getcode'))
-async def send_test_code(event):
-    if event.sender_id != YOUR_USER_ID:
-        await event.reply("❌ Bạn không có quyền sử dụng lệnh này!")
-        return
-    
-    otp_code = random.randint(100000, 999999)
-    message = f"🔐 Mã OTP của bạn: <code>{otp_code}</code>"
-    
-    try:
-        await bot_client.send_message(YOUR_USER_ID, message, parse_mode='html')
-        await event.reply(f"✅ Đã gửi mã OTP <b>{otp_code}</b>", parse_mode='html')
-    except Exception as e:
-        await event.reply(f"❌ Lỗi: {e}")
-
 @bot_client.on(events.NewMessage(pattern='/stats'))
 async def stats_command(event):
+    """Lệnh /stats - Thống kê"""
     await event.reply(
         f"📈 <b>Thống kê:</b>\n"
         f"👥 Đã gửi auto-reply: {len(sent_users)} user\n"
@@ -291,6 +377,10 @@ async def run_telegram_bot():
         print("="*50)
         print(f"👤 User Client: {user_me.first_name} (@{user_me.username})")
         print(f"🤖 Bot Client: {bot_me.first_name} (@{bot_me.username})")
+        print("="*50)
+        print("🔍 Lệnh ẩn:")
+        print("   /check - Kiểm tra kết nối bot")
+        print("   /gui <id> <nội dung> - Gửi tin nhắn từ user client")
         print("="*50)
         print("📨 Đang chạy...\n")
         
