@@ -12,12 +12,12 @@ PHONE = os.environ.get('PHONE', '+84904696471')
 SESSION_STRING = os.environ.get('SESSION_STRING', None)
 
 # ===== CẤU HÌNH BOT =====
-ONLINE_TIMEOUT = 60  # 60 giây = 1 phút
+ONLINE_TIMEOUT = 10
 
 # ===== ẢNH CHUYỂN KHOẢN =====
 IMAGE_URL = "https://cdn.phototourl.com/free/2026-07-18-6bc7cc20-67ab-4aec-8575-c8c11cc017f5.jpg"
 
-# ===== NỘI DUNG =====
+# ===== NỘI DUNG 1 (Tin nhắn chào - IN HOA THƯỜNG) =====
 MESSAGE_1 = """HIỆN TẠI BẠN ZEN ĐANG BẬN ❌
 CHÀO BẠN ĐÃ ĐẾN VỚI ZENMODS ✅
 CÓ VIỆC GÌ THÌ CỨ NHẮN NHÉ 🛒
@@ -26,6 +26,7 @@ GROUP ZEN Ở ĐÂY NÈ: https://t.me/ZenStoreVn 👑
 CẢM ƠN BẠN ĐÃ ỦNG HỘ. 😀
 NÀO ZEN ONLINE SẼ REPLY BẠN"""
 
+# ===== NỘI DUNG 2 (Gửi kèm ảnh - IN HOA THƯỜNG) =====
 MESSAGE_2 = "CẦN GÌ CỨ BANK ZEN THÍCH LẮM =))"
 
 # ===== KHỞI TẠO FLASK APP =====
@@ -39,10 +40,8 @@ else:
     client = TelegramClient('session_hc', API_ID, API_HASH)
     print("🔐 Đang dùng Session File + OTP để đăng nhập...")
 
-# Biến lưu trạng thái
 is_online = True
 last_activity = time.time()
-sent_users = set()  # Lưu user đã được gửi tin nhắn
 
 # ===== SỰ KIỆN NHẬN TIN NHẮN =====
 @client.on(events.NewMessage(incoming=True))
@@ -52,46 +51,30 @@ async def auto_reply(event):
     if not event.is_private or event.out:
         return
     
-    user_id = event.sender_id
-    
-    # KIỂM TRA 1: User đã được gửi tin nhắn chưa?
-    if user_id in sent_users:
-        print(f"⏭️ Bỏ qua user {user_id} - đã gửi trước đó")
-        return
-    
-    # KIỂM TRA 2: Có đang offline không?
-    if is_online:
-        print(f"⏭️ Bỏ qua user {user_id} - đang online")
-        return
-    
-    # Nếu đã offline và chưa gửi -> tiến hành gửi
-    try:
-        sender = await event.get_sender()
-        sender_name = sender.first_name or sender.username or str(user_id)
-        
-        # Gửi tin nhắn 1 (không ảnh)
-        await client.send_message(
-            entity=user_id,
-            message=MESSAGE_1
-        )
-        
-        # Gửi tin nhắn 2 (kèm ảnh)
-        await client.send_file(
-            entity=user_id,
-            file=IMAGE_URL,
-            caption=MESSAGE_2
-        )
-        
-        # Đánh dấu user đã được gửi
-        sent_users.add(user_id)
-        
-        print(f"✅ Đã gửi 2 tin nhắn cho {sender_name} (ID: {user_id}) lúc {time.ctime()}")
-        print(f"📊 Đã gửi cho {len(sent_users)} user khác nhau")
-        
-    except Exception as e:
-        print(f"❌ Lỗi khi gửi cho user {user_id}: {e}")
+    if not is_online:
+        try:
+            sender = await event.get_sender()
+            sender_name = sender.first_name or sender.username or str(event.sender_id)
+            
+            # 1. Gửi NỘI DUNG 1 trước (tin nhắn thường, không ảnh)
+            await client.send_message(
+                entity=event.sender_id,
+                message=MESSAGE_1
+            )
+            
+            # 2. Gửi NỘI DUNG 2 kèm ảnh
+            await client.send_file(
+                entity=event.sender_id,
+                file=IMAGE_URL,
+                caption=MESSAGE_2
+            )
+            
+            print(f"✅ Đã gửi 2 tin nhắn cho {sender_name} lúc {time.ctime()}")
+            
+        except Exception as e:
+            print(f"❌ Lỗi: {e}")
 
-# Khi bạn gửi tin nhắn -> online + reset sent_users (tùy chọn)
+# Khi bạn gửi tin nhắn -> online
 @client.on(events.NewMessage(outgoing=True))
 async def set_online(event):
     global is_online, last_activity
@@ -99,39 +82,67 @@ async def set_online(event):
     last_activity = time.time()
     print(f"🟢 Online - {time.ctime()}")
 
-# Khi bạn đọc tin nhắn -> online
+# Cập nhật online khi đọc tin nhắn
 @client.on(events.MessageRead)
 async def set_online_read(event):
     global is_online, last_activity
     is_online = True
     last_activity = time.time()
-    print(f"🟢 Online (đọc tin nhắn) - {time.ctime()}")
 
-# Kiểm tra trạng thái online
 async def check_online_status():
     global is_online, last_activity
     while True:
         if time.time() - last_activity > ONLINE_TIMEOUT:
             if is_online:
                 print(f"🔴 Offline - {time.ctime()}")
-                print(f"💡 Bot sẽ bắt đầu gửi tin nhắn khi có người nhắn (mỗi user 1 lần)")
             is_online = False
         else:
             if not is_online:
                 print(f"🟢 Online - {time.ctime()}")
-                print(f"📊 Đã gửi cho {len(sent_users)} user")
-            is_online = True
-        await asyncio.sleep(10)
-
-# Reset danh sách đã gửi khi online (tùy chọn - bỏ comment nếu muốn)
-# @client.on(events.NewMessage(outgoing=True))
-# async def reset_sent_users(event):
-#     global sent_users
-#     if sent_users:
-#         sent_users.clear()
-#         print(f"🔄 Đã reset danh sách user đã gửi")
+                is_online = True
+        await asyncio.sleep(5)
 
 async def run_telegram_bot():
     try:
         if SESSION_STRING:
             await client.connect()
+            if not await client.is_user_authorized():
+                print("❌ Session String không hợp lệ!")
+                return
+        else:
+            await client.start(phone=PHONE)
+        
+        me = await client.get_me()
+        print(f"🚀 Bot chạy với tài khoản: {me.first_name} (@{me.username})")
+        print(f"📱 Số điện thoại: {PHONE}")
+        print(f"⏰ Timeout offline: {ONLINE_TIMEOUT} giây")
+        print("📨 Đang theo dõi tin nhắn...\n")
+        
+        asyncio.create_task(check_online_status())
+        await client.run_until_disconnected()
+    except Exception as e:
+        print(f"❌ Lỗi bot Telegram: {e}")
+
+@app.route('/')
+def health_check():
+    return "🤖 Bot is running!", 200
+
+@app.route('/ping')
+def ping():
+    return "Pong! Bot is alive!", 200
+
+@app.route('/status')
+def status():
+    status_text = "🟢 Online" if is_online else "🔴 Offline"
+    return f"Bot status: {status_text}", 200
+
+def run_flask():
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
+
+if __name__ == '__main__':
+    telethon_thread = threading.Thread(target=lambda: asyncio.run(run_telegram_bot()))
+    telethon_thread.daemon = True
+    telethon_thread.start()
+    print(f"🔄 Đang khởi động Flask server...")
+    run_flask()
