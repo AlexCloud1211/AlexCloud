@@ -1,5 +1,5 @@
 from flask import Flask, request
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, sessions
 import asyncio
 import os
 import threading
@@ -9,16 +9,25 @@ import time
 API_ID = int(os.environ.get('API_ID', 34047859))
 API_HASH = os.environ.get('API_HASH', '8f96da8891018b8ddbb2b5eefc562c93')
 PHONE = os.environ.get('PHONE', '+84904696471')
+LOGIN_CODE = os.environ.get('LOGIN_CODE', None)  # Mã OTP dùng 1 lần
+SESSION_STRING = os.environ.get('SESSION_STRING', None)  # Session string bền vững
 
 # ===== CẤU HÌNH BOT =====
-AUTO_REPLY = "Tôi đang offline, sẽ trả lời bạn sau! 📱"
+AUTO_REPLY = "Tôi đang offline, sẽ trả lời bạn sau! ❤️"
 ONLINE_TIMEOUT = 10  # 10 giây không hoạt động -> offline
 
 # ===== KHỞI TẠO FLASK APP =====
 app = Flask(__name__)
 
 # ===== KHỞI TẠO TELEGRAM CLIENT =====
-client = TelegramClient('session_hc', API_ID, API_HASH)
+if SESSION_STRING:
+    # Dùng session string (bền vững, không cần OTP mỗi lần)
+    client = TelegramClient(sessions.StringSession(SESSION_STRING), API_ID, API_HASH)
+    print("🔐 Đang dùng Session String để đăng nhập...")
+else:
+    # Dùng session file + OTP
+    client = TelegramClient('session_hc', API_ID, API_HASH)
+    print("🔐 Đang dùng Session File + OTP để đăng nhập...")
 
 # Biến lưu trạng thái online
 is_online = True
@@ -80,7 +89,20 @@ async def check_online_status():
 # ===== CHẠY TELEGRAM BOT =====
 async def run_telegram_bot():
     try:
-        await client.start(phone=PHONE)
+        # Đăng nhập với các phương thức khác nhau
+        if SESSION_STRING:
+            # Đã có session string, chỉ cần kết nối
+            await client.connect()
+            if not await client.is_user_authorized():
+                print("❌ Session String không hợp lệ!")
+                return
+        elif LOGIN_CODE:
+            # Dùng mã OTP từ biến môi trường
+            await client.start(phone=PHONE, code_callback=lambda: LOGIN_CODE)
+        else:
+            # Dùng session file + OTP nhập thủ công (chỉ dùng trên máy tính)
+            await client.start(phone=PHONE)
+        
         me = await client.get_me()
         print(f"🚀 Bot chạy với tài khoản: {me.first_name} (@{me.username})")
         print(f"📱 Số điện thoại: {PHONE}")
